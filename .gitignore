@@ -1,2 +1,6 @@
-*.venv
+.venv
 logs
+temp
+data
+requests
+dags/__pycache__
