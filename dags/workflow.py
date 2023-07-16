@@ -3,7 +3,6 @@ from airflow.models import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.sensors.filesystem import FileSensor
-from airflow.models.connection import Connection
 from datetime import datetime, timedelta
 import pandas as pd
 import requests
@@ -23,17 +22,19 @@ default_args = {
 dag = DAG('workFlow_eng_dados', 
     description="Trabalho final da disciplina de Engenharia de Dados",
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval=timedelta(seconds=30),
     start_date=datetime(2023,7,7),
     default_view='graph',
     tags=['Eng. Dados', 'Trabalho Final', 'Pipeline'],
+    max_active_runs=1,
     catchup=False)
 
-file_sensor = FileSensor(
-    task_id='file_sensor',
+file_sensor_task = FileSensor(
+    task_id='file_sensor_task',
     filepath='/opt/airflow/requests/requests.json',
-    poke_interval=10,
-    fs_conn_id='connect_file',
+    fs_conn_id='fs_default',
+    mode="reschedule",
+    poke_interval=5,
     dag=dag
 )
 
@@ -153,6 +154,6 @@ extract_info = PythonOperator(
     dag=dag
 )
 
-file_sensor >> get_body_requests 
-get_body_requests >> remove_requests_json
-get_body_requests >> api_query >> transform_data_to_csv >> [clear_temp, extract_info]
+file_sensor_task >> get_body_requests >> api_query
+api_query >> remove_requests_json
+api_query >> transform_data_to_csv >> [clear_temp, extract_info]
